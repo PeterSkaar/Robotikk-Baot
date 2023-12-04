@@ -1,12 +1,12 @@
-%% Prosjekt Baot
+%% Prosjekt Le Baot
 % Transformasjonsmatriser symbolsk og med verdiar for BaotArm
 % Prosjekt Haust 2023
-% Peter Søreide Skaar, Vegard Aven Ullbenø, Roar Bøyum
+% Authors: Peter Søreide Skaar, Vegard Aven Ullbenø, Roar Bøyum
 
 % Scriptet er best køyrd i seksjonar basert på kva ein ønsker
 
 %% Denavit-Hartenberg parameters / links & joints
-
+% Må initialiseres dersom ein skal bruke fkine kommando.
 L1 = 5;
 L2 = 34.4;
 L3 = 21.26;
@@ -19,38 +19,43 @@ j3 = Revolute('d', 0,         'a', L3,  'alpha', 0     );
 j4 = Revolute('d', 0,         'a', L4,  'alpha', pi/2  );
 j5 = Revolute('d', L5,        'a', 0,  'alpha' , 0     );
 
-%% Robot
+% Robot
 Robot = SerialLink([j1 j2 j3 j4 j5]);
 Robot.teach
 
-%% Matriser : Transformasjons symbolsk
+%% Matriser : Transformasjons Løysning symbolsk
 
 syms th1 th2 th3 th4 L1 L2 L3 L4 L5
 
 % Utrekningar
-% Base robotarm
+% Base robotarm, translert med x = 20 og z = 20 frå world origo.
 T0 = transl(20,0,20)
 
+% Utrekningar av Translasjon_01
 R1 = trotz(th1);
 V1 = transl(0,0,L1);
 T1 = T0*V1*R1
-
 % Snur heile feltet
 T1 = T1*trotx(pi/2)
 
+% Utrekningar av Translasjon_12
 R2 = trotz(th2);
 V2 = transl(L2,0,0);
 T2 = T1*R2*V2
 
+% Utrekningar av Translasjon_23
 R3 = trotz(th3);
 V3 = transl(L3,0,0);
 T3 = T2 * R3 * V3
- 
+
+% Utrekningar av Translasjon_34
 R4 = trotz(th4);
 V4 = transl(L4,0,0);
 T4 = T3 * R4 * V4
+% Snyr heile feltet
 T4 = T4*trotx(pi/2)
 
+% Utrekningar av Translasjon_45
 V5 = transl(0,0,L5);
 R5 = eye(4)
 T5 = T4*R5*V5;
@@ -116,8 +121,7 @@ L1 = 5;
 L2 = 34.4;
 L3 = 21.26;
 L4 = 15.7;
-L5 = 0;
-off_end = 5; % offset endeffector
+L5 = 5;
 
 % Utrekningar
 % Base robotarm
@@ -180,8 +184,10 @@ C2x = 32.5;
 C2y = -18;
 C2z = 22;
 
-RC1 = trotz(15,'deg')
-RC2 = trotz(15,'deg')
+% Fast rotasjon hentet frå rpy2rad
+% R = rpy2r(0,0,pi/21)
+RC1 = [0.9888, -0.1490, 0, 0; 0.1490, 0.9888 0, 0; 0 0 1 0; 0 0 0 1]
+RC2 = [0.9888, 0.1490, 0, 0; -0.1490, 0.9888 0, 0; 0 0 1 0; 0 0 0 1]
 
 C1 = transl(C1x, C1y, C1z) * RC1
 C2 = transl(C2x, C2y, C2z) * RC2
@@ -192,53 +198,18 @@ Transformasjon_C2W = inv(C2)
 Transformasjon_C1Arm = Transformasjon_C1W *T0;
 Transformasjon_C2Arm = Transformasjon_C2W *T0;
 
-% Plott for å vise kamera plassering
-
-coor_Scope = [ -20,  20;   %y
-                0 , 20;   %z
-               -50,  50;]; %x
-A=[coor_Scope(1,1),coor_Scope(2,2),coor_Scope(3,2);
-   coor_Scope(1,1),coor_Scope(2,2),coor_Scope(3,1);
-   coor_Scope(1,2),coor_Scope(2,2),coor_Scope(3,1);
-   coor_Scope(1,2),coor_Scope(2,2),coor_Scope(3,2);
-   coor_Scope(1,1),coor_Scope(2,1),coor_Scope(3,2);
-   coor_Scope(1,1),coor_Scope(2,1),coor_Scope(3,1);
-   coor_Scope(1,2),coor_Scope(2,1),coor_Scope(3,1);
-   coor_Scope(1,2),coor_Scope(2,1),coor_Scope(3,2)];
-d=[1 2 3 4 8 5 6 7 3 2 6 5 1 4 8 7];
-X = A(d,3);
-Y = A(d,1);
-Z = A(d,2);
-
-hold on;
-plot3(A(d,3),A(d,1),A(d,2));
-hold on;
-patch([X(1:6) flip(X(1:6))], [Y(1:6) flip(Y(1:6))], [Z(1:6) flip(Z(1:6))], 'r', 'FaceAlpha',0.25)
-kp = 2;
-patch([X((1:6)+kp) flip(X((1:6)+kp))], [Y((1:6)+kp) flip(Y((1:6)+kp))], [Z((1:6)+kp) flip(Z((1:6)+kp))], 'g', 'FaceAlpha',0.25)
-kp = 10;
-patch([X((1:6)+kp) flip(X((1:6)+kp))], [Y((1:6)+kp) flip(Y((1:6)+kp))], [Z((1:6)+kp) flip(Z((1:6)+kp))], 'b', 'FaceAlpha',0.25)
-hold on;
-xlim([-80 80])
-ylim([-80 80])
-zlim([-80 80])
-hold on;
-trplot(M,  'World' , '1', 'color', 'b');
-trplot(T0, 'Robotarm' , '2', 'color', 'g');
-trplot(C1, 'kamera1', '1', 'color', 'r');
-trplot(C2, 'kamera2', '2', 'color', 'r');
-
 
 %% Plotting
-plotvol([0 90 0 90 -5 20]);
-trplot(M,  'frame' , '1', 'color', 'b');
-trplot(T0, 'frame' , '1', 'color', 'b');
-trplot(T1, 'frame' , '2', 'color', 'r');
-trplot(T2, 'frame' , '3', 'color', 'g');
-trplot(T4, 'frame' , '4', 'color', 'b');
-trplot(T5, 'frame' , '5', 'color', 'r');
-trplot(C1, 'kamera', '6', 'color', 'r');
-trplot(C2, 'kamera', '7', 'color', 'r');
+plotvol([0 90 0 90 -5 50]);
+trplot(M,  'frame' , 'W', 'color',  'b');
+trplot(T0, 'frame' , 'T0', 'color', 'b');
+trplot(T1, 'frame' , 'T1', 'color', 'r');
+trplot(T2, 'frame' , 'T2', 'color', 'g');
+trplot(T3, 'frame' , 'T3', 'color', 'g');
+trplot(T4, 'frame' , 'T4', 'color', 'b');
+trplot(T5, 'frame' , 'T5', 'color', 'r');
+trplot(C1, 'frame' , 'C', 'color',  'r');
+trplot(C2, 'frame' , 'C', 'color',  'r');
 
 
 %% Animering
